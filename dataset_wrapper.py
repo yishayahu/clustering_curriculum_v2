@@ -10,22 +10,6 @@ import numpy as np
 class DsWrapper(torch.utils.data.Dataset):
     def __init__(self,model,dataset_creator,n_clusters,start_transform,feature_layer_name,**kwargs):
 
-        #######
-        root = kwargs["root"]
-        curr_index = 0
-        train_indexes = []
-        clustering_indexes = []
-        for class_name in os.scandir(root):
-            for img in os.listdir(class_name.path):
-
-                if random.random() < 0.8:
-                    train_indexes.append(curr_index)
-                else:
-                    clustering_indexes.append(curr_index)
-                curr_index += 1
-        regular_sampler = RegularSampler(data_source=self, train_indexes=train_indexes,
-                                         clustering_indexes=clustering_indexes)
-        self.current_sampler = regular_sampler
         #####
         self.future_transform = kwargs.pop("transform")
 
@@ -34,6 +18,17 @@ class DsWrapper(torch.utils.data.Dataset):
         self.dataset_creator = dataset_creator
         self.future_kwargs = kwargs
         #####
+
+
+        #######
+        all_indexes = random.shuffle(list(range(len(self.ds))))
+        train_indexes = all_indexes[:int(len(self.ds)*0.8)]
+        clustering_indexes = all_indexes[int(len(self.ds)*0.8):]
+
+        regular_sampler = RegularSampler(data_source=self, train_indexes=train_indexes,
+                                         clustering_indexes=clustering_indexes)
+        self.current_sampler = regular_sampler
+
 
 
         ######
