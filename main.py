@@ -77,7 +77,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'multi node data parallel training')
 
 parser.add_argument('--use_clustering_curriculum', action='store_true')
-parser.add_argument('--n_cluster',default=None, type=int)
+parser.add_argument('--n_clusters',default=None, type=int)
 
 best_acc1 = 0
 
