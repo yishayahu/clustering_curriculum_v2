@@ -22,3 +22,5 @@ class RegularSampler(torch.utils.data.Sampler):
         for idx in indexes:
             yield idx
         self._clustering_flag = "done"
+    def __len__(self):
+        return len(self.ds)

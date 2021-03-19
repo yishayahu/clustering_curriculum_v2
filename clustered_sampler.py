@@ -38,7 +38,7 @@ class ClusteredSampler(torch.utils.data.Sampler):
 
 
     def __iter__(self):
-        indexes = list(range(self.ds.len))
+        indexes = list(range(len(self.ds)))
         random.shuffle(indexes)
         print(f"self.center is {self.center}")
         curr_hierarchy = {}
@@ -57,3 +57,5 @@ class ClusteredSampler(torch.utils.data.Sampler):
                     yield idx
             else:
                 yield idx
+    def __len__(self):
+        return len(self.ds)

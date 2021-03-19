@@ -18,6 +18,7 @@ import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
 from dataset_wrapper import DsWrapper
+from dataloader_wrapper import DataLoaderWrapper
 
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
@@ -31,7 +32,7 @@ parser.add_argument('-a', '--arch', metavar='ARCH', default='resnet18',
                     help='model architecture: ' +
                         ' | '.join(model_names) +
                         ' (default: resnet18)')
-parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
+parser.add_argument('-j', '--workers', default=0, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
@@ -173,7 +174,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     # define loss function (criterion) and optimizer
     if args.use_clustering_curriculum:
-        criterion = nn.CrossEntropyLoss(reduction="None").cuda(args.gpu)
+        criterion = nn.CrossEntropyLoss(reduction="none").cuda(args.gpu)
     else:
         criterion = nn.CrossEntropyLoss().cuda(args.gpu)
 
@@ -213,18 +214,18 @@ def main_worker(gpu, ngpus_per_node, args):
 
 
     if args.use_clustering_curriculum:
-        train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder, batch_size=args.batch_size,
+        train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
                                   n_clusters=args.n_clusters
-                                  , start_transforms=transforms.Compose([
+                                  , start_transform=transforms.Compose([transforms.Resize(size = (224,224)),
 
                 transforms.ToTensor(),
                 normalize,
-            ]),transforms=transforms.Compose([
+            ]),transform=transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
-            ]),train_dir=traindir)
+            ]),root=traindir,feature_layer_name='module.avgpool')
     else:
         train_dataset = datasets.ImageFolder(
             traindir,
@@ -234,17 +235,20 @@ def main_worker(gpu, ngpus_per_node, args):
                 transforms.ToTensor(),
                 normalize,
             ]))
+    data_loader_func = torch.utils.data.DataLoader
     if args.distributed:
         assert not args.use_clustering_curriculum
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
         if args.use_clustering_curriculum:
             train_sampler = train_dataset.current_sampler
+            args.workers = 0
+            data_loader_func = DataLoaderWrapper(data_loader_func).recreate
         else:
             train_sampler = None
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
+    train_loader = data_loader_func(
+        dataset =train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
     val_loader = torch.utils.data.DataLoader(
@@ -314,7 +318,11 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         # compute output
         output = model(images)
         loss = criterion(output, target)
-        loss = train_loader.dataset.send_loss(loss,train_loader)
+        if args.use_clustering_curriculum:
+            if type(train_loader.dataset) == DsWrapper:
+                loss = train_loader.dataset.send_loss(loss,train_loader)
+            else:
+                loss = torch.mean(loss)
 
         # measure accuracy and record loss
         acc1, acc5 = accuracy(output, target, topk=(1, 5))
@@ -359,6 +367,8 @@ def validate(val_loader, model, criterion, args):
             # compute output
             output = model(images)
             loss = criterion(output, target)
+            if args.use_clustering_curriculum:
+                loss = torch.mean(loss)
 
             # measure accuracy and record loss
             acc1, acc5 = accuracy(output, target, topk=(1, 5))
