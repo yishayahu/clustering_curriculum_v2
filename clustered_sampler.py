@@ -14,13 +14,11 @@ class ClusteredSampler(torch.utils.data.Sampler):
         self.decrease_center = decrease_center
         self.n_cluster = n_cluster
         self.center = self.n_cluster + 1
-        self.create_distribiouns(losses)
+        if losses:
+            self.create_distribiouns(losses)
 
     def create_distribiouns(self, losses):
-        losses = np.zeros(self.n_cluster)
-
         assert self.center > 0
-
         losses_mean = np.mean(losses)
         new_losses = np.zeros(self.n_cluster)
         for cluster_index, cluster_loss in enumerate(losses):
@@ -59,3 +57,10 @@ class ClusteredSampler(torch.utils.data.Sampler):
                 yield idx
     def __len__(self):
         return len(self.ds)
+    def state_dict(self):
+        return {"center":self.center,"index_to_cluster":self.index_to_cluster,"hierarchy":self.hierarchy}
+
+    def load_state_dict(self, state_dict):
+        self.center = state_dict["center"]
+        self.index_to_cluster = state_dict["index_to_cluster"]
+        self.hierarchy = state_dict["hierarchy"]

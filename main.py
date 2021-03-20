@@ -17,6 +17,8 @@ import torch.utils.data.distributed
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
+
+from clustered_sampler import ClusteredSampler
 from dataset_wrapper import DsWrapper
 from dataloader_wrapper import DataLoaderWrapper
 
@@ -182,27 +184,7 @@ def main_worker(gpu, ngpus_per_node, args):
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
 
-    # optionally resume from a checkpoint
-    if args.resume:
-        if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
-            if args.gpu is None:
-                checkpoint = torch.load(args.resume)
-            else:
-                # Map model to be loaded to specified single gpu.
-                loc = 'cuda:{}'.format(args.gpu)
-                checkpoint = torch.load(args.resume, map_location=loc)
-            args.start_epoch = checkpoint['epoch']
-            best_acc1 = checkpoint['best_acc1']
-            if args.gpu is not None:
-                # best_acc1 may be from a checkpoint from a different GPU
-                best_acc1 = best_acc1.to(args.gpu)
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+
 
     cudnn.benchmark = True
 
@@ -213,7 +195,7 @@ def main_worker(gpu, ngpus_per_node, args):
                                      std=[0.229, 0.224, 0.225])
 
 
-    if args.use_clustering_curriculum:
+    if args.use_clustering_curriculum and not args.resume:
         train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
                                   n_clusters=args.n_clusters
                                   , start_transform=transforms.Compose([transforms.Resize(size = (224,224)),
@@ -240,12 +222,41 @@ def main_worker(gpu, ngpus_per_node, args):
         assert not args.use_clustering_curriculum
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
     else:
-        if args.use_clustering_curriculum:
-            train_sampler = train_dataset.current_sampler
-            args.workers = 0
+        if args.use_clustering_curriculum :
+            if not args.resume:
+                train_sampler = train_dataset.current_sampler
+                args.workers = 0
             data_loader_func = DataLoaderWrapper(data_loader_func).recreate
         else:
             train_sampler = None
+        # optionally resume from a checkpoint
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            if args.gpu is None:
+                checkpoint = torch.load(args.resume)
+            else:
+                # Map model to be loaded to specified single gpu.
+                loc = 'cuda:{}'.format(args.gpu)
+                checkpoint = torch.load(args.resume, map_location=loc)
+            args.start_epoch = checkpoint['epoch']
+            best_acc1 = checkpoint['best_acc1']
+            if args.gpu is not None:
+                # best_acc1 may be from a checkpoint from a different GPU
+                best_acc1 = best_acc1.to(args.gpu)
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            if args.use_clustering_curriculum:
+                if  checkpoint["sampler_state_dict"]:
+                    train_sampler = ClusteredSampler(data_source=train_dataset,index_to_cluster=None,n_cluster=args.n_clusters,losses=None)
+                    train_sampler.load_state_dict(checkpoint["sampler_state_dict"])
+                else:
+                    raise Exception("could not resume")
+            print("=> loaded checkpoint '{}' (epoch {})"
+                  .format(args.resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
 
     train_loader = data_loader_func(
         dataset =train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
@@ -282,12 +293,16 @@ def main_worker(gpu, ngpus_per_node, args):
 
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):
+            sampler_state_dict = None
+            if type(train_sampler)  ==ClusteredSampler:
+                sampler_state_dict = train_sampler.state_dict()
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
                 'state_dict': model.state_dict(),
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
+                'sampler_state_dict':sampler_state_dict
             }, is_best)
 
 
