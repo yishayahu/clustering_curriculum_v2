@@ -54,3 +54,6 @@ class DataLoaderWrapper(torch.utils.data.DataLoader):
     @property
     def generator(self):
         return self.dl.generator
+    @property
+    def sampler(self):
+        return self.dl.sampler

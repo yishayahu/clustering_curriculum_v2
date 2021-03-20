@@ -294,8 +294,8 @@ def main_worker(gpu, ngpus_per_node, args):
         if not args.multiprocessing_distributed or (args.multiprocessing_distributed
                 and args.rank % ngpus_per_node == 0):
             sampler_state_dict = None
-            if type(train_sampler)  ==ClusteredSampler:
-                sampler_state_dict = train_sampler.state_dict()
+            if type(train_loader.sampler)  ==ClusteredSampler:
+                sampler_state_dict = train_loader.sampler.state_dict()
             save_checkpoint({
                 'epoch': epoch + 1,
                 'arch': args.arch,
