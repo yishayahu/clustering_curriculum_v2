@@ -199,16 +199,12 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.use_clustering_curriculum and not args.resume:
         train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
                                   n_clusters=args.n_clusters
-                                  , start_transform=transforms.Compose([transforms.Resize(size = (224,224)),
-
-                transforms.ToTensor(),
-                normalize,
-            ]),transform=transforms.Compose([
+                                  , start_transform=transforms.Compose([transforms.Resize(256),transforms.CenterCrop(224),transforms.ToTensor(),normalize]),transform=transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
-            ]),root=traindir,feature_layer_name='module.avgpool')
+            ]),root=traindir,feature_layer_name='avgpool')
     else:
         train_dataset = datasets.ImageFolder(
             traindir,
