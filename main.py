@@ -21,7 +21,7 @@ import torchvision.models as models
 from clustered_sampler import ClusteredSampler
 from dataset_wrapper import DsWrapper
 from dataloader_wrapper import DataLoaderWrapper
-
+print("imports done")
 model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
@@ -85,6 +85,7 @@ best_acc1 = 0
 
 
 def main():
+    print("start main")
     args = parser.parse_args()
 
     if args.seed is not None:
@@ -194,7 +195,7 @@ def main_worker(gpu, ngpus_per_node, args):
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
 
-
+    print("creating ds")
     if args.use_clustering_curriculum and not args.resume:
         train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
                                   n_clusters=args.n_clusters
@@ -275,7 +276,7 @@ def main_worker(gpu, ngpus_per_node, args):
     if args.evaluate:
         validate(val_loader, model, criterion, args)
         return
-
+    print("start traing")
     for epoch in range(args.start_epoch, args.epochs):
         if args.distributed:
             train_sampler.set_epoch(epoch)
@@ -287,7 +288,7 @@ def main_worker(gpu, ngpus_per_node, args):
         # evaluate on validation set
         acc1 = validate(val_loader, model, criterion, args)
 
-        # remember best acc@1 and save checkpoint
+        # remember best acc@1 and save checkpoint1
         is_best = acc1 > best_acc1
         best_acc1 = max(acc1, best_acc1)
 
