@@ -48,7 +48,8 @@ class DsWrapper(torch.utils.data.Dataset):
                 for (index,label) in zip(self.new_indexes,self.clustering_algorithm.predict(arrays)):
                     self.index_to_cluster[index] = label
             else:
-                assert len(self.new_indexes) == 0
+                if not model.training:
+                    assert len(self.new_indexes) == 0
         for module_name, module1 in model.named_modules():
             if module_name == feature_layer_name:
                 module1.register_forward_hook(feature_layer_hook)
