@@ -37,6 +37,7 @@ parser.add_argument('--filters', default=16, type=int, help='filter number in UP
 '''clustering area'''
 parser.add_argument('--use_clustering_curriculum', action='store_true')
 parser.add_argument('--n_clusters',default=None, type=int)
+parser.add_argument('--warmups',default=1, type=int)
 
 args = parser.parse_args()
 
@@ -82,7 +83,7 @@ if args.datasets == 'cifar_10' or args.datasets == 'cifar_100':
             trainset = DsWrapper(model=net, dataset_creator=torchvision.datasets.CIFAR10,
                                       n_clusters=args.n_clusters
                                       , start_transform=transform_test,
-                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='bn',train=True,download=True)
+                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='bn',train=True,download=True,warmups=args.warmups)
             trainloader = DataLoaderWrapper(torch.utils.data.DataLoader).recreate(dataset=trainset, batch_size=args.batch_size, sampler=trainset.current_sampler, num_workers=0)
         else:
             trainset = torchvision.datasets.CIFAR10(
@@ -259,23 +260,23 @@ for epoch in range(start_epoch, start_epoch + args.epochs):
     accuracy_line = 'train_acc: {0} %, test_acc: {1} % '.format(train_acc, test_acc)
     loss_line = 'train_loss: {0},e test_loss: {1} '.format(train_loss, test_loss)
 
-    if epoch % 1 == 0:
-        plt.subplot(2, 1, 1)
-        plt.plot(epoch_list, train_list, c='blue', label='train loss')
-        plt.plot(epoch_list, test_list, c='red', label='test loss')
-        plt.ylabel('loss')
-        plt.xlabel('epoch')
-        plt.legend(loc=0)
-
-        plt.subplot(2, 1, 2)
-        plt.plot(epoch_list, train_acc_list, c='blue', label='train acc')
-        plt.plot(epoch_list, test_acc_list, c='red', label='test acc')
-        plt.ylabel('acc')
-        plt.xlabel('epoch')
-        plt.legend(loc=0)
-
-        plt.savefig(save_path + '/train_history.png')
-    #        plt.show()
+    # if epoch % 1 == 0:
+    #     plt.subplot(2, 1, 1)
+    #     plt.plot(epoch_list, train_list, c='blue', label='train loss')
+    #     plt.plot(epoch_list, test_list, c='red', label='test loss')
+    #     plt.ylabel('loss')
+    #     plt.xlabel('epoch')
+    #     plt.legend(loc=0)
+    #
+    #     plt.subplot(2, 1, 2)
+    #     plt.plot(epoch_list, train_acc_list, c='blue', label='train acc')
+    #     plt.plot(epoch_list, test_acc_list, c='red', label='test acc')
+    #     plt.ylabel('acc')
+    #     plt.xlabel('epoch')
+    #     plt.legend(loc=0)
+    #
+    #     plt.savefig(save_path + '/train_history.png')
+    # #        plt.show()
 
     with open(save_path + '/logs.txt', 'a') as f:
         f.write(epoch_line + best_acc_line + accuracy_line + loss_line + '\n')

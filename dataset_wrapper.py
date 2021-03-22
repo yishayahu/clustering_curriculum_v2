@@ -8,7 +8,7 @@ from regular_sampler import RegularSampler
 import numpy as np
 
 class DsWrapper(torch.utils.data.Dataset):
-    def __init__(self,model,dataset_creator,n_clusters,start_transform,feature_layer_name,**kwargs):
+    def __init__(self,model,dataset_creator,n_clusters,start_transform,feature_layer_name,warmups,**kwargs):
 
         #####
         self.future_transform = kwargs.pop("transform")
@@ -27,7 +27,7 @@ class DsWrapper(torch.utils.data.Dataset):
         clustering_indexes = all_indexes[int(len(self.ds)*0.8):]
 
         regular_sampler = RegularSampler(data_source=self, train_indexes=train_indexes,
-                                         clustering_indexes=clustering_indexes)
+                                         clustering_indexes=clustering_indexes,warmup_epochs=warmups)
         self.current_sampler = regular_sampler
 
 

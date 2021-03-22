@@ -80,6 +80,7 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
 
 parser.add_argument('--use_clustering_curriculum', action='store_true')
 parser.add_argument('--n_clusters',default=None, type=int)
+parser.add_argument('--warmups',default=1, type=int)
 
 best_acc1 = 0
 
@@ -204,7 +205,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
                 normalize,
-            ]),root=traindir,feature_layer_name='avgpool')
+            ]),root=traindir,feature_layer_name='avgpool',warmups=args.warmups)
     else:
         train_dataset = datasets.ImageFolder(
             traindir,
