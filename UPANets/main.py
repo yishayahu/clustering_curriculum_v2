@@ -111,7 +111,7 @@ elif args.datasets == 'tiny_imgnet':
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-    test_dir = '/content/tiny-imagenet-200/val'
+    test_dir = '/content/tiny-imagenet-200/new_val'
     testset = torchvision.datasets.ImageFolder(
         test_dir, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
