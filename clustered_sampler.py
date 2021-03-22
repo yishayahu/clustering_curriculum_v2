@@ -22,6 +22,8 @@ class ClusteredSampler(torch.utils.data.Sampler):
         for cluster_index in range(len(losses)):
             losses[cluster_index] = np.mean(losses[cluster_index])
         losses_mean = np.mean(list(filter(lambda v: v==v, np.array(losses))))
+        print(f"losses mean is {losses_mean}")
+        print(f"losses is {losses}")
         new_losses = np.zeros(self.n_cluster)
         for cluster_index, cluster_loss in enumerate(losses):
             if cluster_loss:
@@ -34,6 +36,7 @@ class ClusteredSampler(torch.utils.data.Sampler):
             self.hierarchy.append(max_idx)
             new_losses[max_idx] = -1
         self.hierarchy = [-1] + self.hierarchy
+        print(f"hierarchy is {self.hierarchy}")
         assert len(self.hierarchy) == self.n_cluster + 1
 
 
