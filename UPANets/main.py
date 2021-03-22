@@ -24,7 +24,7 @@ parser.add_argument('--save_path', default='./results/', type=str, help='package
 '''experiment setting'''
 parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
-parser.add_argument('--datasets', default='tiny_imgnet', type=str, help='using dataset')
+parser.add_argument('--datasets', default='cifar_10', type=str, help='using dataset')
 parser.add_argument('--batch_size', default=100, type=int, help='batch size')
 parser.add_argument('--epochs', default=100, type=int, help='total traing epochs')
 

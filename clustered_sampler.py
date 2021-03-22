@@ -8,6 +8,7 @@ import torchvision.transforms.functional as F
 
 class ClusteredSampler(torch.utils.data.Sampler):
     def __init__(self, data_source,index_to_cluster,n_cluster,losses,decrease_center = 1):
+        self.step = 0
         self.ds = data_source
         self.index_to_cluster =index_to_cluster
         self.hierarchy = []
@@ -44,6 +45,7 @@ class ClusteredSampler(torch.utils.data.Sampler):
         indexes = list(range(len(self.ds)))
         random.shuffle(indexes)
         print(f"self.center is {self.center}")
+        print(f"steps done is {self.step}")
         curr_hierarchy = {}
         self.center -= self.decrease_center
         for i in range(len(self.hierarchy)):
@@ -57,8 +59,10 @@ class ClusteredSampler(torch.utils.data.Sampler):
                 assert cluster in curr_hierarchy
                 randi = random.random()
                 if randi < curr_hierarchy[cluster]:
+                    self.step +=1
                     yield idx
             else:
+                self.step += 1
                 yield idx
     def __len__(self):
         return len(self.ds)
