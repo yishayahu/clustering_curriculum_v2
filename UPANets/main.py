@@ -124,14 +124,14 @@ elif args.datasets == 'tiny_imgnet':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    train_dir = '/content/tiny-imagenet-200/train'
+    train_dir = r'C:\Users\Y\PycharmProjects\data\data_clustering\tiny-imagenet-200\train'
 
     trainset = torchvision.datasets.ImageFolder(
         train_dir, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-    test_dir = '/content/tiny-imagenet-200/new_val'
+    test_dir = r'C:\Users\Y\PycharmProjects\data\data_clustering\tiny-imagenet-200\new_val'
     testset = torchvision.datasets.ImageFolder(
         test_dir, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
@@ -143,7 +143,8 @@ print('==> Building model..')
 
 net = net.to(device)
 if device == 'cuda':
-    net = torch.nn.DataParallel(net)
+    if not args.use_clustering_curriculum:
+        net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
 if args.use_clustering_curriculum:
