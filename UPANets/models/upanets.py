@@ -153,8 +153,8 @@ class upanets(nn.Module):
         self.spa3 = SPA(int(img * 0.25))
         self.spa4 = SPA(int(img * 0.125))
 
-        self.linear = nn.Linear(int(self.filters * 31), num_classes)
         self.bn = nn.BatchNorm1d(int(self.filters * 31))
+        self.linear = nn.Linear(int(self.filters * 31), num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
 

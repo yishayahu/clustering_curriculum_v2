@@ -12,6 +12,8 @@ import sys
 import matplotlib.pyplot as plt
 from torchsummary import summary
 import numpy as np
+from dataloader_wrapper import DataLoaderWrapper
+from dataset_wrapper import DsWrapper
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 # total_epoch = 100
@@ -32,6 +34,10 @@ parser.add_argument('--epochs', default=100, type=int, help='total traing epochs
 parser.add_argument('--blocks', default=1, type=int, help='block number in UPANets')
 parser.add_argument('--filters', default=16, type=int, help='filter number in UPANets')
 
+'''clustering area'''
+parser.add_argument('--use_clustering_curriculum', action='store_true')
+parser.add_argument('--n_clusters',default=None, type=int)
+
 args = parser.parse_args()
 
 pkgpath = args.pkg_path
@@ -51,7 +57,12 @@ start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
 # Data
 print('==> Preparing data..')
-
+if args.datasets == 'cifar_10':
+    net = UPANets(args.filters, 10, args.blocks, 32)
+elif args.datasets == 'tiny_imgnet':
+    net = UPANets(args.filters, 200, args.blocks, 64)
+else:
+    assert False
 if args.datasets == 'cifar_10' or args.datasets == 'cifar_100':
     transform_train = transforms.Compose([
         transforms.RandomCrop(32, padding=4),
@@ -66,10 +77,18 @@ if args.datasets == 'cifar_10' or args.datasets == 'cifar_100':
     ])
 
     if args.datasets == 'cifar_10':
-        trainset = torchvision.datasets.CIFAR10(
-            root='./data/cifar_10', train=True, download=True, transform=transform_train)
-        trainloader = torch.utils.data.DataLoader(
-            trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
+
+        if args.use_clustering_curriculum:
+            trainset = DsWrapper(model=net, dataset_creator=torchvision.datasets.CIFAR10,
+                                      n_clusters=args.n_clusters
+                                      , start_transform=transform_test,
+                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='bn',train=True,download=True)
+            trainloader = DataLoaderWrapper(torch.utils.data.DataLoader).recreate(dataset=trainset, batch_size=args.batch_size, sampler=trainset.current_sampler, num_workers=0)
+        else:
+            trainset = torchvision.datasets.CIFAR10(
+                root='./data/cifar_10', train=True, download=True, transform=transform_train)
+            trainloader = torch.utils.data.DataLoader(
+                trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
         testset = torchvision.datasets.CIFAR10(
             root='./data/cifar_10', train=False, download=True, transform=transform_test)
@@ -120,18 +139,22 @@ elif args.datasets == 'tiny_imgnet':
     img_size = 64
 # Model
 print('==> Building model..')
-net = UPANets(args.filters, classes, args.blocks, img_size)
+
 net = net.to(device)
 if device == 'cuda':
     net = torch.nn.DataParallel(net)
     cudnn.benchmark = True
 
-criterion = nn.CrossEntropyLoss()
+if args.use_clustering_curriculum:
+    criterion = nn.CrossEntropyLoss(reduction="none")
+else:
+    criterion = nn.CrossEntropyLoss()
+
 optimizer = optim.SGD(net.parameters(), lr=0.1,
                       momentum=0.9, weight_decay=0.0005)
 
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-summary(net, (3, 32, 32))
+# summary(net, (3, 32, 32))
 
 
 # %%
@@ -149,13 +172,19 @@ def train(epoch):
         optimizer.zero_grad()
         outputs = net(inputs)
         loss = criterion(outputs, targets)
+        if args.use_clustering_curriculum:
+            if type(trainloader.dataset) == DsWrapper:
+                loss = trainloader.dataset.send_loss(loss, trainloader)
+            else:
+                loss = torch.mean(loss)
         loss.backward()
         optimizer.step()
         train_loss += loss.item()
         _, predicted = outputs.max(1)
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
-
+        print('train_Loss: %.3f | train_Acc: %.3f%% (%d/%d)'
+                     % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
         progress_bar(batch_idx, len(trainloader), 'train_Loss: %.3f | train_Acc: %.3f%% (%d/%d)'
                      % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
 
@@ -175,7 +204,8 @@ def test(epoch):
             targets = targets.to(device)
             outputs = net(inputs)
             loss = criterion(outputs, targets)
-
+            if args.use_clustering_curriculum:
+                loss = torch.mean(loss)
             test_loss += loss.item()
             _, predicted = outputs.max(1)
             total += targets.size(0)
