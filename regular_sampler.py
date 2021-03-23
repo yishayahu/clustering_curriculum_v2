@@ -13,7 +13,7 @@ class RegularSampler(torch.utils.data.Sampler):
         return self._clustering_flag
     def __iter__(self):
         if self.counter < self.warmup_epochs+1:
-            self.couter+=1
+            self.counter+=1
             indexes = self.train_indexes
             random.shuffle(indexes)
             for idx in indexes:
