@@ -84,7 +84,8 @@ class DsWrapper(torch.utils.data.Dataset):
 
 
     def __getitem__(self, item):
-        self.new_indexes.append(item)
+        if type(self.current_sampler) == RegularSampler:
+            self.new_indexes.append(item)
         return self.ds[item]
     def __len__(self):
         return len(self.ds)

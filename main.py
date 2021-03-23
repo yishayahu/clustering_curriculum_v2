@@ -56,6 +56,7 @@ parser.add_argument('-p', '--print-freq', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
 parser.add_argument('--resume', default='', type=str, metavar='PATH',
                     help='path to latest checkpoint (default: none)')
+parser.add_argument('--exp_name', default='', type=str)
 parser.add_argument('-e', '--evaluate', dest='evaluate', action='store_true',
                     help='evaluate model on validation set')
 parser.add_argument('--pretrained', dest='pretrained', action='store_true',
@@ -301,7 +302,7 @@ def main_worker(gpu, ngpus_per_node, args):
                 'best_acc1': best_acc1,
                 'optimizer' : optimizer.state_dict(),
                 'sampler_state_dict':sampler_state_dict
-            }, is_best)
+            }, is_best,filename=f'checkpoint_{args.exp_name}.pth.tar')
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
