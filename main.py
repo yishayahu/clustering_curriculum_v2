@@ -400,6 +400,11 @@ def validate(val_loader, model, criterion, args):
         # TODO: this should also be done with the ProgressMeter
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
+        if not os.path.exists(f"{args.exp_name}"):
+            os.mkdir(f"{args.exp_name}")
+        f = open(f"{args.exp_name}/log.txt", "a")
+        f.write(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'.format(top1=top1, top5=top5))
+        f.close()
 
     return top1.avg
 
