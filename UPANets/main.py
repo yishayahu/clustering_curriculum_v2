@@ -124,14 +124,14 @@ elif args.datasets == 'tiny_imgnet':
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
-    train_dir = r'C:\Users\Y\PycharmProjects\data\data_clustering\tiny-imagenet-200\train'
+    train_dir = 'tiny-imagenet-200/train'
 
     trainset = torchvision.datasets.ImageFolder(
         train_dir, transform=transform_train)
     trainloader = torch.utils.data.DataLoader(
         trainset, batch_size=args.batch_size, shuffle=True, num_workers=0)
 
-    test_dir = r'C:\Users\Y\PycharmProjects\data\data_clustering\tiny-imagenet-200\new_val'
+    test_dir = 'tiny-imagenet-200/new_val'
     testset = torchvision.datasets.ImageFolder(
         test_dir, transform=transform_test)
     testloader = torch.utils.data.DataLoader(
@@ -186,8 +186,8 @@ def train(epoch):
         total += targets.size(0)
         correct += predicted.eq(targets).sum().item()
 
-        progress_bar(batch_idx, len(trainloader), 'train_Loss: %.3f | train_Acc: %.3f%% (%d/%d)'
-                     % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+        # progress_bar(batch_idx, len(trainloader), 'train_Loss: %.3f | train_Acc: %.3f%% (%d/%d)'
+        #              % (train_loss / (batch_idx + 1), 100. * correct / total, correct, total))
 
     return train_loss / (batch_idx + 1), 100. * correct / total
 
@@ -213,8 +213,8 @@ def test(epoch):
             correct += predicted.eq(targets).sum().item()
             acc_list.append(100. * correct / total)
 
-            progress_bar(batch_idx, len(testloader), 'test_Loss: %.3f | test_Acc: %.3f%% (%d/%d)'
-                         % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
+            # progress_bar(batch_idx, len(testloader), 'test_Loss: %.3f | test_Acc: %.3f%% (%d/%d)'
+            #              % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
             print()
             print('>>>best acc: {0}, mean: {1}, std: {2}'.format(best_acc, round(np.mean(acc_list), 2),
                                                                  round(np.std(acc_list), 2)))
