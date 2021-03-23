@@ -215,9 +215,9 @@ def test(epoch):
 
             # progress_bar(batch_idx, len(testloader), 'test_Loss: %.3f | test_Acc: %.3f%% (%d/%d)'
             #              % (test_loss / (batch_idx + 1), 100. * correct / total, correct, total))
-            print()
-            print('>>>best acc: {0}, mean: {1}, std: {2}'.format(best_acc, round(np.mean(acc_list), 2),
-                                                                 round(np.std(acc_list), 2)))
+            # print()
+            # print('>>>best acc: {0}, mean: {1}, std: {2}'.format(best_acc, round(np.mean(acc_list), 2),
+            #                                                      round(np.std(acc_list), 2)))
 
     # Save checkpoint.
     acc = 100. * correct / total

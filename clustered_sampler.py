@@ -29,6 +29,10 @@ class ClusteredSampler(torch.utils.data.Sampler):
         losses_mean = losses_mean / len(losses)
         print(f"losses mean is {losses_mean}")
         print(f"losses is {losses}")
+        amounts = np.zeros(self.n_cluster)
+        for image_index,cluster in self.index_to_cluster.items():
+            amounts[cluster]+=1
+        print(f" amounts is {amounts}")
         new_losses = np.zeros(self.n_cluster)
         for cluster_index, cluster_loss in enumerate(losses):
             if cluster_loss:
