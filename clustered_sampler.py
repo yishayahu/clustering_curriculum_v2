@@ -20,9 +20,13 @@ class ClusteredSampler(torch.utils.data.Sampler):
 
     def create_distribiouns(self, losses):
         assert self.center > 0
+        losses_mean = 0
         for cluster_index in range(len(losses)):
-            losses[cluster_index] = np.mean(losses[cluster_index])
-        losses_mean = np.mean(list(filter(lambda v: v==v, np.array(losses))))
+            if losses[cluster_index]:
+                losses[cluster_index] = np.mean(losses[cluster_index])
+                losses_mean+= losses[cluster_index]
+
+        losses_mean = losses_mean / len(losses)
         print(f"losses mean is {losses_mean}")
         print(f"losses is {losses}")
         new_losses = np.zeros(self.n_cluster)
