@@ -272,7 +272,7 @@ def main_worker(gpu, ngpus_per_node, args):
         num_workers=args.workers, pin_memory=True)
 
     if args.evaluate:
-        validate(val_loader, model, criterion, args)
+        validate(val_loader, model, criterion,train_loader, args)
         return
     print("start traing")
     for epoch in range(args.start_epoch, args.epochs):
@@ -357,7 +357,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
             progress.display(i)
 
 
-def validate(val_loader, model, criterion, args):
+def validate(val_loader, model, criterion,train_loader, args):
     batch_time = AverageMeter('Time', ':6.3f')
     losses = AverageMeter('Loss', ':.4e')
     top1 = AverageMeter('Acc@1', ':6.2f')
@@ -403,7 +403,12 @@ def validate(val_loader, model, criterion, args):
         if not os.path.exists(f"{args.exp_name}"):
             os.mkdir(f"{args.exp_name}")
         f = open(f"{args.exp_name}/log.txt", "a")
-        f.write(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'.format(top1=top1, top5=top5))
+        f.write(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}\n'.format(top1=top1, top5=top5))
+        if args.use_clustering_curriculum:
+            if type(train_loader.sampler) == ClusteredSampler:
+                print("writing sampler params to file ")
+                f.write(f"self.center is {train_loader.sampler.center}\n")
+                f.write(f"steps done is {train_loader.sampler.step}\n")
         f.close()
 
     return top1.avg
