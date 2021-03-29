@@ -284,7 +284,7 @@ def main_worker(gpu, ngpus_per_node, args):
         train(train_loader, model, criterion, optimizer, epoch, args)
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1 = validate(val_loader, model, criterion,train_loader, args)
 
         # remember best acc@1 and save checkpoint1
         is_best = acc1 > best_acc1
