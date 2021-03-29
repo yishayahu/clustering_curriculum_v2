@@ -14,7 +14,7 @@ from torchsummary import summary
 import numpy as np
 from dataloader_wrapper import DataLoaderWrapper
 from dataset_wrapper import DsWrapper
-
+from  clustered_sampler import ClusteredSampler
 warnings.simplefilter(action='ignore', category=FutureWarning)
 # total_epoch = 100
 
@@ -52,7 +52,7 @@ sys.path.append(pkgpath)
 from UPANets.models.upanets import UPANets
 from UPANets.utils import progress_bar
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = 'cuda:3' if torch.cuda.is_available() else 'cpu'
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
@@ -280,4 +280,8 @@ for epoch in range(start_epoch, start_epoch + args.epochs):
 
     with open(save_path + '/logs.txt', 'a') as f:
         f.write(epoch_line + best_acc_line + accuracy_line + loss_line + '\n')
+        if type(trainloader.sampler) == ClusteredSampler:
+            print("writing sampler params to file ")
+            f.write(f"self.center is {trainloader.sampler.center}\n")
+            f.write(f"steps done is {trainloader.sampler.step}\n")
     scheduler.step()
