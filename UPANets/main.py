@@ -169,6 +169,8 @@ def train(epoch):
     correct = 0
     total = 0
     for batch_idx, (inputs, targets) in enumerate(trainloader):
+        if inputs.shape[0] ==1:
+            continue
         inputs = inputs.to(device)
         targets = targets.to(device)
         optimizer.zero_grad()
@@ -201,6 +203,8 @@ def test(epoch):
     acc_list = []
     with torch.no_grad():
         for batch_idx, (inputs, targets) in enumerate(testloader):
+            if inputs.shape[0] == 1:
+                continue
             inputs = inputs.to(device)
             targets = targets.to(device)
             outputs = net(inputs)
