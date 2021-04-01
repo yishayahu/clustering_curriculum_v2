@@ -3,11 +3,13 @@ import numpy as np
 import torch
 import random
 import os
+
+import torchvision
 import torchvision.transforms.functional as F
 
-
+import matplotlib.pyplot as plt
 class ClusteredSampler(torch.utils.data.Sampler):
-    def __init__(self, data_source,index_to_cluster,n_cluster,losses,decrease_center = 1):
+    def __init__(self, data_source,index_to_cluster,n_cluster,losses,exp_name,decrease_center = 1):
         self.step = 0
         self.ds = data_source
         self.index_to_cluster =index_to_cluster
@@ -16,9 +18,9 @@ class ClusteredSampler(torch.utils.data.Sampler):
         self.n_cluster = n_cluster
         self.center = self.n_cluster + 1
         if losses:
-            self.create_distribiouns(losses)
+            self.create_distribiouns(losses,exp_name)
 
-    def create_distribiouns(self, losses):
+    def create_distribiouns(self, losses,exp_name):
         assert self.center > 0
         losses_mean = 0
         for cluster_index in range(len(losses)):
@@ -47,6 +49,27 @@ class ClusteredSampler(torch.utils.data.Sampler):
         self.hierarchy = [-1] + self.hierarchy
         print(f"hierarchy is {self.hierarchy}")
         assert len(self.hierarchy) == self.n_cluster + 1
+        images = [[] for _ in self.hierarchy]
+        indexes = list(range(len(self.ds)))
+        random.shuffle(indexes)
+        for i in range(200):
+            clus = self.index_to_cluster[indexes[i]]
+            img ,label = self.ds[indexes[i]]
+
+            images[clus].append(img)
+
+        def imsaves(img,stt):
+            npimg = img.numpy()
+            plt.imsave(stt,np.transpose(npimg, (1, 2, 0)))
+        for i,clus in enumerate(images):
+            if clus:
+                print(i)
+                print(self.hierarchy.index(i))
+                new_img = torchvision.utils.make_grid(clus,normalize=True)
+
+                imsaves(new_img,f"{exp_name}/clus_{i}_place_in_hier{self.hierarchy.index(i)}.png")
+
+
 
 
     def __iter__(self):

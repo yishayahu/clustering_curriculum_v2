@@ -83,7 +83,7 @@ if args.datasets == 'cifar_10' or args.datasets == 'cifar_100':
             trainset = DsWrapper(model=net, dataset_creator=torchvision.datasets.CIFAR10,
                                       n_clusters=args.n_clusters
                                       , start_transform=transform_test,
-                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='bn',train=True,download=True,warmups=args.warmups)
+                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='bn',train=True,download=True,warmups=args.warmups,exp_name=args.save_path)
             trainloader = DataLoaderWrapper(torch.utils.data.DataLoader).recreate(dataset=trainset, batch_size=args.batch_size, sampler=trainset.current_sampler, num_workers=0)
         else:
             trainset = torchvision.datasets.CIFAR10(
