@@ -38,7 +38,7 @@ parser.add_argument('--filters', default=16, type=int, help='filter number in UP
 parser.add_argument('--use_clustering_curriculum', action='store_true')
 parser.add_argument('--n_clusters',default=None, type=int)
 parser.add_argument('--warmups',default=1, type=int)
-parser.add_argument('--decrease_center',default=1, type=int)
+parser.add_argument('--decrease_center',default=1, type=float)
 
 args = parser.parse_args()
 
