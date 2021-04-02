@@ -14,6 +14,7 @@ import torch.optim
 import torch.multiprocessing as mp
 import torch.utils.data
 import torch.utils.data.distributed
+import torchvision
 import torchvision.transforms as transforms
 import torchvision.datasets as datasets
 import torchvision.models as models
@@ -78,10 +79,12 @@ parser.add_argument('--multiprocessing-distributed', action='store_true',
                          'N processes per node, which has N GPUs. This is the '
                          'fastest way to use PyTorch for either single node or '
                          'multi node data parallel training')
+parser.add_argument('--datasets', default='imagenet', type=str, help='using dataset')
 
 parser.add_argument('--use_clustering_curriculum', action='store_true')
 parser.add_argument('--n_clusters',default=None, type=int)
 parser.add_argument('--warmups',default=1, type=int)
+parser.add_argument('--decrease_center',default=1, type=float)
 
 best_acc1 = 0
 
@@ -144,7 +147,13 @@ def main_worker(gpu, ngpus_per_node, args):
         model = models.__dict__[args.arch](pretrained=True)
     else:
         print("=> creating model '{}'".format(args.arch))
-        model = models.__dict__[args.arch]()
+        if args.datasets == "cifar_10":
+            model = models.__dict__[args.arch](num_classes=10)
+        elif args.datasets == "imagenet":
+            model = models.__dict__[args.arch]()
+        else:
+            assert False
+
 
     if not torch.cuda.is_available():
         print('using CPU, this will be slow')
@@ -192,30 +201,68 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+
 
     print("creating ds")
-    if args.use_clustering_curriculum and not args.resume:
-        train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
-                                  n_clusters=args.n_clusters
-                                  , start_transform=transforms.Compose([transforms.Resize(256),transforms.CenterCrop(224),transforms.ToTensor(),normalize]),transform=transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
+    if args.datasets == "imagenet":
+        traindir = os.path.join(args.data, 'train')
+        valdir = os.path.join(args.data, 'val')
+        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                         std=[0.229, 0.224, 0.225])
+        if args.use_clustering_curriculum and not args.resume:
+            train_dataset = DsWrapper(model=model, dataset_creator=datasets.ImageFolder,
+                                      n_clusters=args.n_clusters
+                                      , start_transform=transforms.Compose([transforms.Resize(256),transforms.CenterCrop(224),transforms.ToTensor(),normalize]),transform=transforms.Compose([
+                    transforms.RandomResizedCrop(224),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    normalize,
+                ]),root=traindir,feature_layer_name='fc',warmups=args.warmups,exp_name=args.exp_name,decrease_center=args.decrease_center)
+        else:
+            train_dataset = datasets.ImageFolder(
+                traindir,
+                transforms.Compose([
+                    transforms.RandomResizedCrop(224),
+                    transforms.RandomHorizontalFlip(),
+                    transforms.ToTensor(),
+                    normalize,
+                ]))
+        val_loader = torch.utils.data.DataLoader(
+            datasets.ImageFolder(valdir, transforms.Compose([
+                transforms.Resize(256),
+                transforms.CenterCrop(224),
                 transforms.ToTensor(),
                 normalize,
-            ]),root=traindir,feature_layer_name='avgpool',warmups=args.warmups)
-    else:
-        train_dataset = datasets.ImageFolder(
-            traindir,
-            transforms.Compose([
-                transforms.RandomResizedCrop(224),
-                transforms.RandomHorizontalFlip(),
-                transforms.ToTensor(),
-                normalize,
-            ]))
+            ])),
+            batch_size=args.batch_size, shuffle=False,
+            num_workers=args.workers, pin_memory=True)
+    elif args.datasets == "cifar_10":
+        transform_train = transforms.Compose([
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+        transform_test = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+        if args.use_clustering_curriculum:
+            train_dataset = DsWrapper(model=model, dataset_creator=torchvision.datasets.CIFAR10,
+                                      n_clusters=args.n_clusters
+                                      , start_transform=transform_test,
+                                      transform=transform_train, root='./data/cifar_10', feature_layer_name='fc',train=True,download=True,warmups=args.warmups,exp_name=args.exp_name,decrease_center=args.decrease_center )
+
+        else:
+            train_dataset = torchvision.datasets.CIFAR10(
+                root='./data/cifar_10', train=True, download=True, transform=transform_train)
+
+
+        testset = torchvision.datasets.CIFAR10(
+            root='./data/cifar_10', train=False, download=True, transform=transform_test)
+        val_loader = torch.utils.data.DataLoader(
+            testset, batch_size=args.batch_size, shuffle=False, num_workers=0)
     data_loader_func = torch.utils.data.DataLoader
     if args.distributed:
         assert not args.use_clustering_curriculum
@@ -247,7 +294,7 @@ def main_worker(gpu, ngpus_per_node, args):
             optimizer.load_state_dict(checkpoint['optimizer'])
             if args.use_clustering_curriculum:
                 if  checkpoint["sampler_state_dict"]:
-                    train_sampler = ClusteredSampler(data_source=train_dataset,index_to_cluster=None,n_cluster=args.n_clusters,losses=None)
+                    train_sampler = ClusteredSampler(data_source=train_dataset,index_to_cluster=None,n_cluster=args.n_clusters,losses=None,exp_name=args.exp_name)
                     train_sampler.load_state_dict(checkpoint["sampler_state_dict"])
                 else:
                     raise Exception("could not resume")
@@ -261,15 +308,7 @@ def main_worker(gpu, ngpus_per_node, args):
         dataset =train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
         num_workers=args.workers, pin_memory=True, sampler=train_sampler)
 
-    val_loader = torch.utils.data.DataLoader(
-        datasets.ImageFolder(valdir, transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])),
-        batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+
 
     if args.evaluate:
         validate(val_loader, model, criterion,train_loader, args)
