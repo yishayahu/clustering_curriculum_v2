@@ -265,23 +265,7 @@ for epoch in range(start_epoch, start_epoch + args.epochs):
     accuracy_line = 'train_acc: {0} %, test_acc: {1} % '.format(train_acc, test_acc)
     loss_line = 'train_loss: {0},e test_loss: {1} '.format(train_loss, test_loss)
 
-    # if epoch % 1 == 0:
-    #     plt.subplot(2, 1, 1)
-    #     plt.plot(epoch_list, train_list, c='blue', label='train loss')
-    #     plt.plot(epoch_list, test_list, c='red', label='test loss')
-    #     plt.ylabel('loss')
-    #     plt.xlabel('epoch')
-    #     plt.legend(loc=0)
-    #
-    #     plt.subplot(2, 1, 2)
-    #     plt.plot(epoch_list, train_acc_list, c='blue', label='train acc')
-    #     plt.plot(epoch_list, test_acc_list, c='red', label='test acc')
-    #     plt.ylabel('acc')
-    #     plt.xlabel('epoch')
-    #     plt.legend(loc=0)
-    #
-    #     plt.savefig(save_path + '/train_history.png')
-    # #        plt.show()
+
 
     with open(save_path + '/logs.txt', 'a') as f:
         f.write(epoch_line + best_acc_line + accuracy_line + loss_line + '\n')
